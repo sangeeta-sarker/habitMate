@@ -10,8 +10,11 @@ import { format, startOfDay, subDays, differenceInDays } from 'date-fns';
 import { createServer as createViteServer } from 'vite';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'habitmate-secret-key-123';
-const db = new sqlite('habitmate.db');
+const dbPath = process.env.RENDER_DISK_PATH 
+  ? path.join(process.env.RENDER_DISK_PATH, 'habitmate.db') 
+  : 'habitmate.db';
 
+const db = new sqlite(dbPath);
 //DATABASE
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (

@@ -45,39 +45,59 @@ Overall, HabitMate demonstrates how modern software solutions can be applied to 
 
 ---
 
-# Relational Database Schema Concept
+# Relational Database Schema
 
 ```sql
--- Core User Storage
+-- ==========================================
+-- USER MANAGEMENT
+-- ==========================================
 CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  phone TEXT,
-  password TEXT NOT NULL,
-  streak INTEGER DEFAULT 0,
-  last_open TEXT,
-  total_points INTEGER DEFAULT 0,
-  role TEXT DEFAULT 'user',
-  status TEXT DEFAULT 'active',
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    username       TEXT UNIQUE NOT NULL,
+    email          TEXT UNIQUE NOT NULL,
+    password_hash  TEXT NOT NULL,
+    phone          TEXT,
+    
+    -- Gamification Engine Metrics
+    current_streak INTEGER DEFAULT 0,
+    total_points   INTEGER DEFAULT 0,
+    
+    -- System & Access Control Flags
+    role           TEXT DEFAULT 'user',     -- 'user' | 'admin'
+    account_status TEXT DEFAULT 'active',   -- 'active' | 'restricted'
+    last_login_at  TEXT,                    -- Tracks daily 24h cycle windows
+    created_at     TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
--- Checklist Labels
+-- ==========================================
+-- HABIT TRACKING LOGIC
+-- ==========================================
 CREATE TABLE IF NOT EXISTS labels (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  title TEXT NOT NULL,
-  date TEXT NOT NULL,
-  FOREIGN KEY(user_id) REFERENCES users(id)
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL,
+    title      TEXT NOT NULL,
+    created_on TEXT NOT NULL,               -- YYYY-MM-DD for historical filtering
+    
+    FOREIGN KEY (user_id) 
+        REFERENCES users (id) 
+        ON DELETE CASCADE
 );
 
--- Nested Targets 
 CREATE TABLE IF NOT EXISTS tasks (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  label_id INTEGER NOT NULL,
-  text TEXT NOT NULL,
-  completed INTEGER DEFAULT 0,
-  date TEXT NOT NULL,
-  FOREIGN KEY(label_id) REFERENCES labels(id)
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    label_id     INTEGER NOT NULL,
+    task_content TEXT NOT NULL,
+    is_completed INTEGER DEFAULT 0,        -- 0 = False, 1 = True (SQLite variant)
+    target_date  TEXT NOT NULL,            -- Assures 24h lockdown rules apply
+    
+    FOREIGN KEY (label_id) 
+        REFERENCES labels (id) 
+        ON DELETE CASCADE
 );
+
+-- ==========================================
+-- PERFORMANCE LOOKUP INDEXES
+-- ==========================================
+CREATE INDEX IF NOT EXISTS idx_labels_user ON labels(user_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_label ON tasks(label_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_date  ON tasks(target_date);
